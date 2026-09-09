@@ -1,156 +1,259 @@
+#!/usr/bin/env python3
+
+# File: ./shutdown_gui.py
+#
+# A Windows-like Shutdown DialogBox for Linux Distros.
+#
+# Copyright (C) 2024-Present Arijit Kumar Das <arijitkdgit.official@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+from PIL import Image, ImageTk
 from tkinter import messagebox as mbox
 import tkinter as tk
 import tkinter.ttk as ttk
 import distro, os, webbrowser as wb
+import subprocess as sbproc
 
-distro_name = distro.name()
-WD=536
-HT=278
-action = 'Turn off'
+## CONSTANTS
+DISTRO_NAME = distro.name()
+SRC_ROOT = os.path.dirname(__file__)
+WIN_WIDTH = 600
+WIN_HEIGHT = 300
+DISTRO_ASSET_NAMES = {
+                        "Debian GNU/Linux"  : "debian.gif",
+                        "Linux Mint"        : "mint.gif"
+}
+HELP_LINKS = {
+                "Debian GNU/Linux"  : "https://www.debian.org/doc/",
+                "Linux Mint"        : "https://forums.linuxmint.com/"
+}
+COM_SEQS = {
+                "Debian GNU/Linux" : {
+                    "Switch user"   : "loginctl lock-session",
+                    "Lock"          : "loginctl lock-session",
+                    "Sign out"      : "gnome-session-quit",
+                    "Suspend"       : "systemctl suspend -i",
+                    "Turn off"      : "gnome-session-quit --power-off",
+                    "Restart"       : "gnome-session-quit --reboot"
+                },
+                "Linux Mint" : {
+                    "Switch user"   : "cinnamon-screensaver-command --lock",
+                    "Lock"          : "cinnamon-screensaver-command --lock",
+                    "Sign out"      : "gnome-session-quit --no-prompt",
+                    "Suspend"       : "systemctl suspend",
+                    "Turn off"      : "poweroff",
+                    "Restart"       : "reboot"
+                },
+}
 
-root=tk.Tk()
+class ShutdownGUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Shut Down " + DISTRO_NAME)
+        self.root.configure(bg = "white")
+        self.root.attributes("-topmost",True)
+        self.root.resizable(0, 0)
+        self.root.after_idle(self.root.attributes,"-topmost", False)
 
-root.title('Shut Down '+distro_name)
-root.configure(bg='white')
-root.attributes('-topmost',True)
-root.resizable(0,0)
-root.after_idle(root.attributes,'-topmost',False)
+        scr_width = self.root.winfo_screenwidth()
+        scr_height = self.root.winfo_screenheight()
+        left = (scr_width / 2) - (WIN_WIDTH / 2)
+        top = (scr_height / 2) - (WIN_HEIGHT /2)
 
-screenWidth = root.winfo_screenwidth() 
-screenHeight = root.winfo_screenheight() 	
-left = (screenWidth / 2) - (WD / 2) 		
-top = (screenHeight / 2) - (HT /2) 		
-root.geometry('%dx%d+%d+%d' % (WD, HT, left, top-80))
-
-icon = tk.PhotoImage(file='assets/computer_icon.gif')
-iconpanel= tk.Label(root, image = icon, borderwidth=0)
-iconpanel.place(x=20, y=HT/2+8-30)
-
-img = tk.PhotoImage(file='assets/distro_logo.gif')
-panel = tk.Label(root, image = img, borderwidth=0)
-panel.place(y=30, x=80)
-
-label=ttk.Label(root, text='What do you want the computer to do?', background='white')
-label.place(x=80, y=HT/2-20)
-
-label2=ttk.Label(root, text='Closes all apps and turns off the PC.', background='white')
-label2.place(x=80, y=HT/2+60-18)
-
-n = tk.StringVar() 
-choosen = ttk.Combobox(root, width = 50, textvariable = n, state='readonly')
-choosen['values'] = ['Switch user', 'Lock', 'Sign out', 'Suspend', 'Turn off', 'Restart']   
-choosen.place(x=80, y=HT/2+25-15 ) 
-choosen.current(4)
-
-ok=ttk.Button(text='OK')
-ok.place(y=HT-(20*2)-5, x=((80+34)*2)+30)
-ok.focus_set()
-
-cancel=ttk.Button(text='Cancel')
-cancel.place(y=(HT-(20*2)-5), x=((80+34)*2)+85+30+5)
-
-def cancel_callback():
-    root.destroy()
-
-cancel.configure(command = cancel_callback)
-
-help=ttk.Button(text='Help')
-help.place(y=(HT-(20*2)-5), x=((80+34)*2)+85+85+30+10)
-
-def help_callback():
-    root.withdraw()
-    wb.open("https://forums.linuxmint.com/")
-    cancel_callback()
-
-help.configure(command = help_callback)
+        self.root.geometry("%dx%d+%d+%d" %
+        (WIN_WIDTH, WIN_HEIGHT, left, top - 80))
 
 
-def setVal(event):
-    action = n.get()
-    ok.configure(text='OK')
-    ok.focus_set()
-    if action == 'Turn off':
-        label2.configure(text='Closes all apps and turns off the PC.')
-    elif action == 'Restart':
-        label2.configure(text='Closes all apps, turns off the PC, and then turns it on again.')
-    elif action == 'Sign out':
-        label2.configure(text='Closes all apps and signs you out.')
-    elif action == 'Suspend':
-        label2.configure(text='PC stays on but uses low power. Apps stay open so that when\nthe PC wakes up you\'re instantly back to where you left off.')
-    elif action == 'Switch user':
-        label2.configure(text='Switch users without closing apps. You need to lock the PC first\nand then switch users from available options.')
-        ok.configure(text = 'Lock')
-    elif action == 'Lock':
-        label2.configure(text='Locks the PC to prevent unauthorised access.')
-    else:
-        label2.configure(text='')
+    def load_assets(self):
+        self.distro_asset = Image.open(os.path.join(SRC_ROOT, "assets",
+        DISTRO_ASSET_NAMES[DISTRO_NAME]))
+
+        old_width, old_height = self.distro_asset.size
+        new_dim = (int(old_width * 80 / old_height), 80)
+
+        self.distro_asset = self.distro_asset.resize(new_dim,
+        Image.Resampling.LANCZOS)
+        self.distro_asset_img = ImageTk.PhotoImage(self.distro_asset)
+
+        self.computer_asset = tk.PhotoImage(
+        file = os.path.join(SRC_ROOT, "assets", "computer.gif"))
 
 
-def no_highlight(event):
-    event.widget.master.selection_clear()
+    def create_widgets(self):
+        self.distro_widget = tk.Label(self.root, image = self.distro_asset_img,
+        borderwidth = 0, background= "white")
 
-choosen.bind("<<ComboboxSelected>>", setVal)
-choosen.bind("<FocusIn>", no_highlight)
+        self.frame1 = tk.Frame(self.root, background = "white")
 
+        self.computer_widget = tk.Label(self.frame1,
+        image = self.computer_asset, borderwidth = 0)
 
-def ok_callback():
-    action = n.get()
-    root.withdraw()
-    if action == 'Turn off':
-        os.system('poweroff')
-    elif action == 'Restart':
-        os.system('reboot')
-    elif action == 'Sign out':
-        os.system('gnome-session-quit --no-prompt')
-    elif action == 'Suspend':
-        os.system('systemctl suspend')
-    elif action == 'Switch user' or action == 'Lock':
-        os.system('cinnamon-screensaver-command --lock')
-    cancel_callback()
+        self.question_widget = ttk.Label(self.frame1,
+        text = "What do you want the computer to do?", background = "white")
 
+        self.frame2 = tk.Frame(self.root, background = "white")
 
-def on_enter(event):
-    if (event.widget.master.focus_get() == ok):
-        ok_callback()
-    elif (event.widget.master.focus_get() == cancel):
-        cancel_callback()
-    elif (event.widget.master.focus_get() == help):
-        help_callback()
+        self.choice_var = tk.StringVar()
+        self.combobox_widget = ttk.Combobox(self.frame2, width = 100,
+        textvariable = self.choice_var, state = "readonly",
+        values = [
+                    "Switch user", "Lock", "Sign out",
+                    "Suspend", "Turn off", "Restart"
+        ])
+        self.choice_var.set("Turn off")
 
+        self.desc_widget = ttk.Label(self.frame2,
+        text = "Closes all apps and turns off the PC.", background = "white")
 
-def on_esc(event):
-    cancel_callback()
+        self.frame3 = tk.Frame(self.root, background = "white")
+
+        self.ok_button = ttk.Button(self.frame3, text = "OK")
+        self.cancel_button = ttk.Button(self.frame3, text = "Cancel")
+        self.help_button = ttk.Button(self.frame3, text = "Help")
 
 
-def on_uparrow(event):
-    n.set(choosen['values'][choosen['values'].index(n.get())-1])
-    setVal(event)
+    def draw_widgets(self):
+        self.distro_widget.pack(pady = (20, 10))
+        self.frame1.pack(padx = 20, fill = tk.X)
+        self.computer_widget.pack(side = tk.LEFT)
+        self.question_widget.pack(side = tk.LEFT, padx = 30)
+        self.frame2.pack(fill = tk.X, anchor = tk.E, padx = (100, 20))
+        self.combobox_widget.pack()
+        self.desc_widget.pack(side = tk.LEFT, pady = 10)
+        self.frame3.pack(
+        side = tk.BOTTOM, anchor = tk.E, padx = 20, pady = (10, 20))
+        self.ok_button.pack(side = tk.LEFT, padx = 5)
+        self.cancel_button.pack(side = tk.LEFT, padx = 5)
+        self.help_button.pack(side = tk.LEFT, padx = 5)
 
 
-def on_downarrow(event):
-    option_index = choosen['values'].index(n.get())+1
-    if (option_index == len(choosen['values'])):
-        option_index = 0
-    n.set(choosen['values'][option_index])
-    setVal(event)
+    def cb_update_desc(self, event):
+        action = self.choice_var.get()
+        self.ok_button.configure(text = "OK")
+        self.ok_button.focus_set()
+
+        if (action == "Turn off"):
+            self.desc_widget.configure(
+            text = "Closes all apps and turns off the PC.")
+
+        elif (action == "Restart"):
+            self.desc_widget.configure(
+            text = "Closes all apps, turns off the PC, and then "
+            "turns it on again.")
+
+        elif (action == "Sign out"):
+            self.desc_widget.configure(
+            text = "Closes all apps and signs you out.")
+
+        elif (action == "Suspend"):
+            self.desc_widget.configure(
+            text = "PC stays on but uses low power. Apps stay open so that "
+            "when\nthe PC wakes up you\'re instantly back to where you left "
+            "off.")
+
+        elif (action == "Switch user"):
+            self.desc_widget.configure(
+            text = "Switch users without closing apps. You need to lock "
+            "the PC\nfirst and then switch users from available options.")
+            self.ok_button.configure(text = "Lock")
+
+        elif (action == "Lock"):
+            self.desc_widget.configure(
+            text = "Locks the PC to prevent unauthorised access.")
 
 
-def on_focusout(event):
-    try:
-        if (event.widget.master.focus_displayof() == choosen):
-            ok.focus_set()
-        if (event.widget.master.focus_displayof() == None):
-            cancel_callback()
-    except:
-        ok.focus_set()
+    def cb_cycle_combobox(self, event, cycle):
+        current = self.choice_var.get()
+        cur_index = self.combobox_widget["values"].index(current)
+        val_count = len(self.combobox_widget["values"])
+        if ((cur_index == val_count - 1) and (cycle == +1)):
+            self.choice_var.set(self.combobox_widget["values"][val_count - 1])
+        elif ((cur_index == 0) and (cycle == -1)):
+            self.choice_var.set(self.combobox_widget["values"][0])
+        else:
+            self.choice_var.set(
+            self.combobox_widget["values"][cur_index + 1 * cycle])
+        self.cb_update_desc(event)
 
 
-ok.configure(command=ok_callback)
+    def cb_root_focusout(self, event):
+        try:
+            if (event.widget.master.focus_displayof() == self.combobox_widget):
+                self.ok_button.focus_set()
+            if (event.widget.master.focus_displayof() == None):
+                self.cb_cancel()
+        except:
+            self.ok_button.focus_set()
 
-root.bind('<Return>', on_enter)
-root.bind('<KP_Enter>', on_enter)
-root.bind('<Escape>', on_esc)
-root.bind('<Up>', on_uparrow)
-root.bind('<Down>', on_downarrow)
-root.bind('<FocusOut>', on_focusout)
-root.mainloop()
+
+    def cb_execute_action(self, event):
+        if (event.widget.master.focus_get() == self.ok_button):
+            self.cb_ok()
+        elif (event.widget.master.focus_get() == self.cancel_button):
+            self.cb_cancel()
+        elif (event.widget.master.focus_get() == self.help_button):
+            self.cb_help()
+
+
+    def cb_ok(self):
+        self.root.withdraw()
+        command = COM_SEQS[DISTRO_NAME][self.choice_var.get()]
+        sbproc.run(command.split())
+        self.cb_cancel()
+
+
+    def cb_cancel(self):
+        self.root.destroy()
+
+
+    def cb_help(self):
+        self.root.withdraw()
+        wb.open(HELP_LINKS[DISTRO_NAME])
+        self.cb_cancel()
+
+
+    def bind_callbacks(self):
+        self.combobox_widget.bind(
+        "<<ComboboxSelected>>", self.cb_update_desc)
+        self.combobox_widget.bind(
+        "<FocusIn>", lambda event : event.widget.master.selection_clear())
+        self.root.bind(
+        "<Up>", lambda event: self.cb_cycle_combobox(event, -1))
+        self.root.bind(
+        "<Down>", lambda event: self.cb_cycle_combobox(event, +1))
+        self.root.bind(
+        "<FocusOut>", self.cb_root_focusout)
+        self.root.bind("<Escape>", lambda event: self.cb_cancel())
+        self.root.bind('<Return>', self.cb_execute_action)
+        self.root.bind('<KP_Enter>', self.cb_execute_action)
+
+        self.ok_button.configure(command = self.cb_ok)
+        self.cancel_button.configure(command = self.cb_cancel)
+        self.help_button.configure(command = self.cb_help)
+
+
+    def run(self):
+        self.load_assets()
+        self.create_widgets()
+        self.draw_widgets()
+        self.bind_callbacks()
+        self.ok_button.focus_set()
+        self.root.mainloop()
+
+
+if (__name__ == "__main__"):
+    app = ShutdownGUI()
+    app.run()
