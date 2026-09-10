@@ -74,7 +74,7 @@ class ShutdownGUI:
         top = (scr_height / 2) - (WIN_HEIGHT /2)
 
         self.root.geometry("%dx%d+%d+%d" %
-        (WIN_WIDTH, WIN_HEIGHT, left, top - 80))
+        (WIN_WIDTH, WIN_HEIGHT, left, top - 150))
 
 
     def load_assets(self):
