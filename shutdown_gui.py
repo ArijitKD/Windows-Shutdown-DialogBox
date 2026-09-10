@@ -107,7 +107,7 @@ class ShutdownGUI:
         self.frame2 = tk.Frame(self.root, background = "white")
 
         self.choice_var = tk.StringVar()
-        self.combobox_widget = ttk.Combobox(self.frame2, width = 100,
+        self.combobox_widget = ttk.Combobox(self.frame2, width = 40,
         textvariable = self.choice_var, state = "readonly",
         values = [
                     "Switch user", "Lock", "Sign out",
@@ -131,7 +131,7 @@ class ShutdownGUI:
         self.computer_widget.pack(side = tk.LEFT)
         self.question_widget.pack(side = tk.LEFT, padx = 30)
         self.frame2.pack(fill = tk.X, anchor = tk.E, padx = (100, 20))
-        self.combobox_widget.pack()
+        self.combobox_widget.pack(anchor = tk.W)
         self.desc_widget.pack(side = tk.LEFT, pady = 10)
         self.frame3.pack(
         side = tk.BOTTOM, anchor = tk.E, padx = 20, pady = (10, 20))
